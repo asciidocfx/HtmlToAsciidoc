@@ -1,0 +1,30 @@
+{
+  "name": "to-asciidoc",
+  "main": "to-asciidoc.js",
+  "version": "1.0.0",
+  "homepage": "https://github.com/asciidocfx/to-asciidoc",
+  "authors": [
+    "rahmanusta@kodcu.com"
+  ],
+  "description": "An HTML to Asciidoc converter written in JavaScript",
+  "moduleType": [
+    "globals",
+    "node"
+  ],
+  "keywords": [
+    "asciidoc",
+    "html",
+    "converter"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "he": "~0.5.0"
+  }
+}
