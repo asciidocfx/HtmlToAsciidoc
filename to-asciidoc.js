@@ -52,19 +52,49 @@ var toAsciidoc = function (string) {
         {
             patterns: ['b', 'strong'],
             replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '**' + innerHTML + '**' : '';
+                if(calloutRegExp(innerHTML.trim()))
+                    return '*' + innerHTML + '*';
+                if(calloutRegExp(cleanUp(innerHTML)))
+                    return innerHTML.replace("(","<").replace(")",">");
+                return '';
             }
         },
         {
             patterns: ['i', 'em'],
             replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '__' + innerHTML + '__' : '';
+                return innerHTML ? '_' + innerHTML + '_' : '';
+            }
+        },
+        {
+            patterns: 'sub',
+            replacement: function (str, attrs, innerHTML) {
+                return innerHTML ? '~' + innerHTML + '~' : '';
+            }
+        },
+        {
+            patterns: 'sup',
+            replacement: function (str, attrs, innerHTML) {
+                return innerHTML ? '^' + innerHTML + '^' : '';
+            }
+        },
+        {
+            patterns: 'u',
+            replacement: function (str, attrs, innerHTML) {
+                return innerHTML ? '+++<u>' + innerHTML + '+++<\\u>' : '';
+            }
+        },
+        {
+            patterns: 'del',
+            replacement: function (str, attrs, innerHTML) {
+                return innerHTML ? '+++<del>' + innerHTML + '+++<\\del>' : '';
             }
         },
         {
             patterns: 'code',
             replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '[source,]\n----\n' + he.decode(innerHTML) + '\n----' : '';
+                if(innerHTML)
+                   return attrs ? '[source,]\n----\n' + he.decode(innerHTML) + '\n----' : '`' + innerHTML + '`';
+                return '';
             }
         },
         {
@@ -116,6 +146,10 @@ var toAsciidoc = function (string) {
 
     function attrRegExp(attr) {
         return new RegExp(attr + '\\s*=\\s*["\']?([^"\']*)["\']?', 'i');
+    }
+
+    function calloutRegExp(context){
+        return context.match(/^\(\d+\)$/);
     }
 
     // Pre code blocks
