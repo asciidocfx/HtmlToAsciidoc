@@ -14,7 +14,7 @@ var nbspRegex = new RegExp(String.fromCharCode(160), "g");
 
 var toAsciidoc = function (string) {
 
-    string= string.replace(nbspRegex, " ");
+    string = string.replace(nbspRegex, " ");
 
     var all = document.createElement("div");
     all.innerHTML = string;
@@ -117,11 +117,7 @@ var toAsciidoc = function (string) {
         {
             patterns: ['b', 'strong'],
             replacement: function (str, attrs, innerHTML) {
-                if(calloutRegExp(innerHTML.trim()))
-                    return '*' + innerHTML + '*';
-                if(calloutRegExp(cleanUp(innerHTML)))
-                    return innerHTML.replace("(","<").replace(")",">");
-                return '';
+                return '**' + innerHTML + '**';
             }
         },
         {
@@ -213,7 +209,7 @@ var toAsciidoc = function (string) {
         return asciidoc;
     }
 
-    function calloutRegExp(context){
+    function calloutRegExp(context) {
         return context.match(/^\(\d+\)$/);
     }
 
