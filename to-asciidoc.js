@@ -23,11 +23,10 @@ var toAsciidoc = function (string) {
             parentNode.replaceChild(document.createTextNode(" "), spans[i]);
     }
 
-
     // table converter
     var tables = all.querySelectorAll("table");
     for (var i = 0; i < tables.length; i++) {
-        var tablePrefix = "\n|====\n";
+        var tablePrefix = "\n\n|====\n";
         var tableSuffix = "|====\n";
         var tableText = "";
         tableText += tablePrefix;
@@ -40,7 +39,7 @@ var toAsciidoc = function (string) {
             if (columns.length == 0)
                 columns = tr.querySelectorAll("th");
             var row = [].slice.call(columns).map(function (e) {
-                return "|" + e.innerText;
+                return "|" + e.textContent || e.innerText || "";
             }).join(" ");
             tableText += row + "\n";
         }
@@ -156,7 +155,7 @@ var toAsciidoc = function (string) {
         {
             patterns: 'pre',
             replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '\n----\n' + he.decode(innerHTML) + '\n----\n' : '';
+                return innerHTML ? '\n\n----\n' + he.decode(innerHTML) + '\n----\n' : '';
             }
         },
         {
