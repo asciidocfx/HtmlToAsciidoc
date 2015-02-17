@@ -10,7 +10,11 @@ if (typeof he !== 'object' && typeof require === 'function') {
     var he = require('he');
 }
 
+var nbspRegex = new RegExp(String.fromCharCode(160), "g");
+
 var toAsciidoc = function (string) {
+
+    string= string.replace(nbspRegex, " ");
 
     var all = document.createElement("div");
     all.innerHTML = string;
@@ -113,7 +117,11 @@ var toAsciidoc = function (string) {
         {
             patterns: ['b', 'strong'],
             replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '**' + innerHTML + '**' : '';
+                if(calloutRegExp(innerHTML.trim()))
+                    return '*' + innerHTML + '*';
+                if(calloutRegExp(cleanUp(innerHTML)))
+                    return innerHTML.replace("(","<").replace(")",">");
+                return '';
             }
         },
         {
@@ -137,19 +145,19 @@ var toAsciidoc = function (string) {
         {
             patterns: 'u',
             replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '+++<u>' + innerHTML + '+++<\\u>' : '';
+                return innerHTML ? '[underline]#' + str + '#' : '';
             }
         },
         {
             patterns: 'del',
             replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '+++<del>' + innerHTML + '+++<\\del>' : '';
+                return innerHTML ? '[line-through]#' + str + '#' : '';
             }
         },
         {
             patterns: 'code',
             replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '`' + he.decode(innerHTML) + '`' : '';
+                return innerHTML ? '``' + he.decode(innerHTML) + '``' : '';
             }
         },
         {
@@ -203,6 +211,10 @@ var toAsciidoc = function (string) {
             });
         }
         return asciidoc;
+    }
+
+    function calloutRegExp(context){
+        return context.match(/^\(\d+\)$/);
     }
 
     function attrRegExp(attr) {
