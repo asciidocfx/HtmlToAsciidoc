@@ -6,10 +6,6 @@
  *
  */
 
-if (typeof he !== 'object' && typeof require === 'function') {
-    var he = require('he');
-}
-
 var nbspRegex = new RegExp(String.fromCharCode(160), "g");
 
 var toAsciidoc = function (string) {
@@ -141,25 +137,25 @@ var toAsciidoc = function (string) {
         {
             patterns: 'u',
             replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '[underline]#' + str + '#' : '';
+                return innerHTML ? '[underline]#' + innerHTML + '#' : '';
             }
         },
         {
             patterns: 'del',
             replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '[line-through]#' + str + '#' : '';
+                return innerHTML ? '[line-through]#' + innerHTML + '#' : '';
             }
         },
         {
             patterns: 'code',
             replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '``' + he.decode(innerHTML) + '``' : '';
+                return innerHTML ? '``' + innerHTML + '``' : '';
             }
         },
         {
             patterns: 'pre',
             replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '\n\n----\n' + he.decode(innerHTML) + '\n----\n' : '';
+                return innerHTML ? '\n\n----\n' + innerHTML + '\n----\n' : '';
             }
         },
         {
@@ -169,8 +165,16 @@ var toAsciidoc = function (string) {
                 var src = attrs.match(attrRegExp('src')),
                     alt = attrs.match(attrRegExp('alt')),
                     title = attrs.match(attrRegExp('title'));
-                return src ? '\nimage::' + src[1] + '[' + alt[1] + ']\n' : '';
+                return src ? '\nimage::' + src[1] + '[' + (alt && alt[1] ? alt[1] : '') + ']\n' : '';
                 //return src ? '![' + (alt && alt[1] ? alt[1] : '') + ']' + '(' + src[1] + (title && title[1] ? ' "' + title[1] + '"' : '') + ')' : '';
+            }
+        },
+        {
+            patterns: ["section","div","span","p"],
+            replacement: function (str, attrs, innerHTML) {
+                //var newVar = innerHTML ? strip(innerHTML) : '';
+                console.log(innerHTML)
+                return innerHTML;
             }
         }
     ];
@@ -209,8 +213,16 @@ var toAsciidoc = function (string) {
         return asciidoc;
     }
 
-    function calloutRegExp(context) {
-        return context.match(/^\(\d+\)$/);
+    function strip(html) {
+        html = html.replace(/<[\/]?(span)[^><]*>/ig,"");
+        html = html.replace(/<[\/]?(div)[^><]*>/ig,"");
+        html = html.replace(/<[\/]?(section)[^><]*>/ig,"");
+        html = html.replace(/<[\/]?(p)[^><]*>/ig,"");
+        html = html.replace(/<[\/]?(i)[^><]*>/ig,"");
+        html = html.replace(/(&gt;)/ig,">");
+        html = html.replace(/(&lt;)/ig,"<");
+        html = html.replace(/(&amp;)/ig,"&");
+        return html;
     }
 
     function attrRegExp(attr) {
@@ -220,7 +232,7 @@ var toAsciidoc = function (string) {
     // Pre code blocks
 
     string = string.replace(/<pre\b[^>]*>`([\s\S]*?)`<\/pre>/gi, function (str, innerHTML) {
-        var text = he.decode(innerHTML);
+        var text = innerHTML;
         text = text.replace(/^\t+/g, '  '); // convert tabs to spaces (you know it makes sense)
         text = text.replace(/\n/g, '\n    ');
         return '\n\n    ' + text + '\n';
@@ -286,23 +298,14 @@ var toAsciidoc = function (string) {
         return html;
     }
 
-    function strip(html) {
-        var tmp = document.createElement("div");
-        tmp.innerHTML = html;
-        return tmp.textContent || tmp.innerText || "";
-    }
-
     function cleanUp(string) {
         string = strip(string);
         string = string.replace(/^[\t\r\n]+|[\t\r\n]+$/g, ''); // trim leading/trailing whitespace
         string = string.replace(/\n\s+\n/g, '\n\n');
         string = string.replace(/\n{3,}/g, '\n\n'); // limit consecutive linebreaks to 2
+        string = string.replace(new RegExp("</div>","ig"),"");
         return string;
     }
 
     return cleanUp(string);
 };
-
-if (typeof exports === 'object') {
-    exports.toAsciidoc = toAsciidoc;
-}
