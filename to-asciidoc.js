@@ -12,68 +12,6 @@ if (typeof he !== 'object' && typeof require === 'function') {
 
 var toAsciidoc = function (string) {
 
-    var all = document.createElement("div");
-    all.innerHTML = string;
-
-    // fix for apple converted space
-    var spans = all.querySelectorAll("span.Apple-converted-space");
-    for (var i = 0; i < spans.length; i++) {
-        var parentNode = spans[i].parentNode || "";
-        if (parentNode)
-            parentNode.replaceChild(document.createTextNode(" "), spans[i]);
-    }
-
-
-    // table converter
-    var tables = all.querySelectorAll("table");
-    for (var i = 0; i < tables.length; i++) {
-        var tablePrefix = "\n|====\n";
-        var tableSuffix = "|====\n";
-        var tableText = "";
-        tableText += tablePrefix;
-        var table = tables[i];
-        var trs = table.querySelectorAll("tr");
-
-        for (var j = 0; j < trs.length; j++) {
-            var tr = trs[j];
-            var columns = tr.querySelectorAll("td");
-            if (columns.length == 0)
-                columns = tr.querySelectorAll("th");
-            var row = [].slice.call(columns).map(function (e) {
-                return "|" + e.innerText;
-            }).join(" ");
-            tableText += row + "\n";
-        }
-
-        tableText += tableSuffix;
-
-        if (table.parentNode)
-            table.parentNode.replaceChild(document.createTextNode(tableText), table);
-    }
-
-
-    // fix pre > code block
-    var codes = all.querySelectorAll("pre > code");
-    for (var i = 0; i < codes.length; i++) {
-        var code = codes[i];
-        var innerCode = strip(code.innerHTML);
-        var pre = code.parentNode;
-        if (pre.parentNode)
-            pre.parentNode.replaceChild(document.createTextNode("\n\n[source,java]\n----\n" + innerCode + "\n----\n\n"), pre);
-
-    }
-
-
-    // remove anchor surrounding an img
-    var images = all.querySelectorAll("img");
-    for (var i = 0; i < images.length; i++) {
-        var parentNode = images[i].parentNode || "";
-        if (parentNode.parentNode)
-            if (parentNode.constructor == HTMLAnchorElement)
-                parentNode.parentNode.replaceChild(images[i], parentNode);
-    }
-    string = all.innerHTML;
-
     var ELEMENTS = [
         {
             patterns: 'p',
@@ -101,7 +39,16 @@ var toAsciidoc = function (string) {
             type: 'void',
             replacement: "\n\n'''\n"
         },
+        {
+            patterns: 'a',
+            replacement: function (str, attrs, innerHTML) {
+                var href = attrs.match(attrRegExp('href')),
+                    title = attrs.match(attrRegExp('title'));
 
+                return href ? href[1] + '[' + innerHTML + ']' : '';
+                //return href ? '[' + innerHTML + ']' + '(' + href[1] + (title && title[1] ? ' "' + title[1] + '"' : '') + ')' : str;
+            }
+        },
         {
             patterns: ['b', 'strong'],
             replacement: function (str, attrs, innerHTML) {
@@ -123,25 +70,25 @@ var toAsciidoc = function (string) {
         {
             patterns: 'sup',
             replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '^' + innerHTML + '^^' : '';
+                return innerHTML ? '^' + innerHTML + '^' : '';
+            }
+        },
+        {
+            patterns: 'u',
+            replacement: function (str, attrs, innerHTML) {
+                return innerHTML ? '+++<u>' + innerHTML + '+++<\\u>' : '';
+            }
+        },
+        {
+            patterns: 'del',
+            replacement: function (str, attrs, innerHTML) {
+                return innerHTML ? '+++<del>' + innerHTML + '+++<\\del>' : '';
             }
         },
         {
             patterns: 'code',
             replacement: function (str, attrs, innerHTML) {
                 return innerHTML ? '`' + he.decode(innerHTML) + '`' : '';
-            }
-        },
-        {
-            patterns: 'pre',
-            replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '\n----\n' + he.decode(innerHTML) + '\n----\n' : '';
-            }
-        },
-        {
-            patterns: 'table',
-            replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '\n|====\n' + he.decode(innerHTML) + '\n|====\n' : '';
             }
         },
         {
@@ -153,16 +100,6 @@ var toAsciidoc = function (string) {
                     title = attrs.match(attrRegExp('title'));
                 return src ? 'image::' + src[1] + '[' + alt[1] + ']' : '';
                 //return src ? '![' + (alt && alt[1] ? alt[1] : '') + ']' + '(' + src[1] + (title && title[1] ? ' "' + title[1] + '"' : '') + ')' : '';
-            }
-        },
-        {
-            patterns: 'a',
-            replacement: function (str, attrs, innerHTML) {
-                var href = attrs.match(attrRegExp('href')),
-                    title = attrs.match(attrRegExp('title'));
-
-                return href ? href[1] + '[' + innerHTML + ']' : '';
-                //return href ? '[' + innerHTML + ']' + '(' + href[1] + (title && title[1] ? ' "' + title[1] + '"' : '') + ')' : str;
             }
         }
     ];
@@ -275,18 +212,16 @@ var toAsciidoc = function (string) {
     }
 
     function strip(html) {
-
         var tmp = document.createElement("div");
         tmp.innerHTML = html;
         return tmp.textContent || tmp.innerText || "";
     }
 
     function cleanUp(string) {
-        string = strip(string);
         string = string.replace(/^[\t\r\n]+|[\t\r\n]+$/g, ''); // trim leading/trailing whitespace
         string = string.replace(/\n\s+\n/g, '\n\n');
         string = string.replace(/\n{3,}/g, '\n\n'); // limit consecutive linebreaks to 2
-        return string;
+        return strip(string);
     }
 
     return cleanUp(string);
