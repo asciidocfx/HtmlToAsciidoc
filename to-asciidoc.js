@@ -192,23 +192,24 @@ var toAsciidoc = function (string) {
                 }
             }
         }
-        return string;
-    }
 
-    function replaceEls(html, elProperties) {
-        var pattern = elProperties.type === 'void' ? '<' + elProperties.tag + '\\b([^>]*)\\/?>' : '<' + elProperties.tag + '\\b([^>]*)>([\\s\\S]*?)<\\/' + elProperties.tag + '>',
-            regex = new RegExp(pattern, 'gi'),
-            asciidoc = '';
-        if (typeof elProperties.replacement === 'string') {
-            asciidoc = html.replace(regex, elProperties.replacement);
+        function replaceEls(html, elProperties) {
+            var pattern = elProperties.type === 'void' ? '<' + elProperties.tag + '\\b([^>]*)\\/?>' : '<' + elProperties.tag + '\\b([^>]*)>([\\s\\S]*?)<\\/' + elProperties.tag + '>',
+                regex = new RegExp(pattern, 'gi'),
+                asciidoc = '';
+            if (typeof elProperties.replacement === 'string') {
+                asciidoc = html.replace(regex, elProperties.replacement);
+            }
+            else {
+                asciidoc = html.replace(regex, function (str, p1, p2, p3) {
+                    return elProperties.replacement.call(this, str, p1, p2, p3);
+                });
+            }
+            return asciidoc;
         }
-        else {
-            asciidoc = html.replace(regex, function (str, p1, p2, p3) {
-                return elProperties.replacement.call(this, str, p1, p2, p3);
-            });
-        }
-        return asciidoc;
-    }
+
+        return string;
+     }
 
     function strip(html) {
         html = html.replace(/<[\/]?(span)[^><]*>/ig,"");
@@ -224,6 +225,8 @@ var toAsciidoc = function (string) {
         html = html.replace(/(&gt;)/ig,">");
         html = html.replace(/(&lt;)/ig,"<");
         html = html.replace(/(&amp;)/ig,"&");
+        html = html.replace(/(\u2014)/ig,"--");
+        html = html.replace(/(\u2009)/ig," ");
         return html;
     }
 
