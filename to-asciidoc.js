@@ -26,12 +26,16 @@ var toAsciidoc = function (string) {
     // table converter
     var tables = all.querySelectorAll("table");
     for (var i = 0; i < tables.length; i++) {
-        var tablePrefix = "\n\n|====\n";
-        var tableSuffix = "|====\n";
+        var tableBoundary = "|====\n";
         var tableText = "";
-        tableText += tablePrefix;
         var table = tables[i];
         var trs = table.querySelectorAll("tr");
+        var caption = table.querySelector("caption");
+
+        tableText += "\n\n";
+        if(caption)
+            tableText += "." + caption.innerText.replace(/Table \d+\. /,"") + "\n";
+        tableText += tableBoundary;
 
         for (var j = 0; j < trs.length; j++) {
             var tr = trs[j];
@@ -39,12 +43,12 @@ var toAsciidoc = function (string) {
             if (columns.length == 0)
                 columns = tr.querySelectorAll("th");
             var row = [].slice.call(columns).map(function (e) {
-                return "|" + e.textContent || e.innerText || "";
+                return "|" + (e.innerHTML ? traverse(e.innerHTML) : "");
             }).join(" ");
             tableText += row + "\n";
         }
 
-        tableText += tableSuffix;
+        tableText += tableBoundary;
 
         if (table.parentNode)
             table.parentNode.replaceChild(document.createTextNode(tableText), table);
@@ -52,16 +56,14 @@ var toAsciidoc = function (string) {
 
 
     // fix pre > code block
-    var codes = all.querySelectorAll("pre > code");
+    var codes = all.querySelectorAll("pre,code,pre>code");
     for (var i = 0; i < codes.length; i++) {
         var code = codes[i];
-        var innerCode = strip(code.innerHTML);
-        var pre = code.parentNode;
-        if (pre.parentNode)
-            pre.parentNode.replaceChild(document.createTextNode("\n\n[source,java]\n----\n" + innerCode + "\n----\n\n"), pre);
-
+        if (code.innerHTML.split(/\n|\r|<br>|<\/br>/).length > 1) {
+            if (code.parentNode)
+                code.parentNode.replaceChild(document.createTextNode("\n\n[source,java]\n----\n" + code.innerText + "\n----\n\n"), code);
+        }
     }
-
 
     // remove anchor surrounding an img
     var images = all.querySelectorAll("img");
@@ -71,123 +73,126 @@ var toAsciidoc = function (string) {
             if (parentNode.constructor == HTMLAnchorElement)
                 parentNode.parentNode.replaceChild(images[i], parentNode);
     }
-    string = all.innerHTML;
+    string = traverse(all.innerHTML);
 
-    var ELEMENTS = [
-        {
-            patterns: 'p',
-            replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '\n\n' + innerHTML + '\n' : '';
-            }
-        },
-        {
-            patterns: 'br',
-            type: 'void',
-            replacement: '  \n'
-        },
-        {
-            patterns: 'h([1-6])',
-            replacement: function (str, hLevel, attrs, innerHTML) {
-                var hPrefix = '';
-                for (var i = 0; i < hLevel; i++) {
-                    hPrefix += '=';
+    function traverse(string){
+        var ELEMENTS = [
+            {
+                patterns: 'p',
+                replacement: function (str, attrs, innerHTML) {
+                    return innerHTML ? innerHTML : '';
                 }
-                return '\n\n' + hPrefix + ' ' + innerHTML + '\n';
-            }
-        },
-        {
-            patterns: 'hr',
-            type: 'void',
-            replacement: "\n\n'''\n"
-        },
-        {
-            patterns: 'a',
-            replacement: function (str, attrs, innerHTML) {
-                var href = attrs.match(attrRegExp('href')),
-                    title = attrs.match(attrRegExp('title'));
+            },
+            {
+                patterns: 'br',
+                type: 'void',
+                replacement: '  \n'
+            },
+            {
+                patterns: 'h([1-6])',
+                replacement: function (str, hLevel, attrs, innerHTML) {
+                    var hPrefix = '';
+                    for (var i = 0; i < hLevel; i++) {
+                        hPrefix += '=';
+                    }
+                    return '\n\n' + hPrefix + ' ' + innerHTML + '\n';
+                }
+            },
+            {
+                patterns: 'hr',
+                type: 'void',
+                replacement: "\n\n'''\n"
+            },
+            {
+                patterns: 'a',
+                replacement: function (str, attrs, innerHTML) {
+                    var href = attrs.match(attrRegExp('href')),
+                        title = attrs.match(attrRegExp('title'));
 
-                return href ? href[1] + '[' + innerHTML + ']' : '';
-                //return href ? '[' + innerHTML + ']' + '(' + href[1] + (title && title[1] ? ' "' + title[1] + '"' : '') + ')' : str;
+                    return href ? href[1] + '[' + innerHTML + ']' : '';
+                    //return href ? '[' + innerHTML + ']' + '(' + href[1] + (title && title[1] ? ' "' + title[1] + '"' : '') + ')' : str;
+                }
+            },
+            {
+                patterns: ['b', 'strong'],
+                replacement: function (str, attrs, innerHTML) {
+                    return innerHTML ? '**' + innerHTML + '**' : '';
+                }
+            },
+            {
+                patterns: ['i', 'em'],
+                replacement: function (str, attrs, innerHTML) {
+                    return innerHTML ? '__' + innerHTML + '__' : '';
+                }
+            },
+            {
+                patterns: 'sub',
+                replacement: function (str, attrs, innerHTML) {
+                    return innerHTML ? '~' + innerHTML + '~' : '';
+                }
+            },
+            {
+                patterns: 'sup',
+                replacement: function (str, attrs, innerHTML) {
+                    return innerHTML ? '^' + innerHTML + '^' : '';
+                }
+            },
+            {
+                patterns: 'u',
+                replacement: function (str, attrs, innerHTML) {
+                    return innerHTML ? '[underline]#' + innerHTML + '#' : '';
+                }
+            },
+            {
+                patterns: 'del',
+                replacement: function (str, attrs, innerHTML) {
+                    return innerHTML ? '[line-through]#' + innerHTML + '#' : '';
+                }
+            },
+            {
+                patterns: 'code',
+                replacement: function (str, attrs, innerHTML) {
+                    return innerHTML ? '``' + innerHTML + '``' : '';
+                }
+            },
+            {
+                patterns: 'pre',
+                replacement: function (str, attrs, innerHTML) {
+                    return innerHTML ? '\n\n----\n' + innerHTML + '\n----\n' : '';
+                }
+            },
+            {
+                patterns: 'img',
+                type: 'void',
+                replacement: function (str, attrs, innerHTML) {
+                    var src = attrs.match(attrRegExp('src')),
+                        alt = attrs.match(attrRegExp('alt')),
+                        title = attrs.match(attrRegExp('title'));
+                    return src ? '\nimage::' + src[1] + '[' + (alt && alt[1] ? alt[1] : '') + ']\n' : '';
+                    //return src ? '![' + (alt && alt[1] ? alt[1] : '') + ']' + '(' + src[1] + (title && title[1] ? ' "' + title[1] + '"' : '') + ')' : '';
+                }
             }
-        },
-        {
-            patterns: ['b', 'strong'],
-            replacement: function (str, attrs, innerHTML) {
-                return '**' + innerHTML + '**';
-            }
-        },
-        {
-            patterns: ['i', 'em'],
-            replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '__' + innerHTML + '__' : '';
-            }
-        },
-        {
-            patterns: 'sub',
-            replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '~' + innerHTML + '~' : '';
-            }
-        },
-        {
-            patterns: 'sup',
-            replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '^' + innerHTML + '^' : '';
-            }
-        },
-        {
-            patterns: 'u',
-            replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '[underline]#' + innerHTML + '#' : '';
-            }
-        },
-        {
-            patterns: 'del',
-            replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '[line-through]#' + innerHTML + '#' : '';
-            }
-        },
-        {
-            patterns: 'code',
-            replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '``' + innerHTML + '``' : '';
-            }
-        },
-        {
-            patterns: 'pre',
-            replacement: function (str, attrs, innerHTML) {
-                return innerHTML ? '\n\n----\n' + innerHTML + '\n----\n' : '';
-            }
-        },
-        {
-            patterns: 'img',
-            type: 'void',
-            replacement: function (str, attrs, innerHTML) {
-                var src = attrs.match(attrRegExp('src')),
-                    alt = attrs.match(attrRegExp('alt')),
-                    title = attrs.match(attrRegExp('title'));
-                return src ? '\nimage::' + src[1] + '[' + (alt && alt[1] ? alt[1] : '') + ']\n' : '';
-                //return src ? '![' + (alt && alt[1] ? alt[1] : '') + ']' + '(' + src[1] + (title && title[1] ? ' "' + title[1] + '"' : '') + ')' : '';
-            }
-        }
-    ];
+        ];
 
-    for (var i = 0, len = ELEMENTS.length; i < len; i++) {
-        if (typeof ELEMENTS[i].patterns === 'string') {
-            string = replaceEls(string, {
-                tag: ELEMENTS[i].patterns,
-                replacement: ELEMENTS[i].replacement,
-                type: ELEMENTS[i].type
-            });
-        }
-        else {
-            for (var j = 0, pLen = ELEMENTS[i].patterns.length; j < pLen; j++) {
+        for (var i = 0, len = ELEMENTS.length; i < len; i++) {
+            if (typeof ELEMENTS[i].patterns === 'string') {
                 string = replaceEls(string, {
-                    tag: ELEMENTS[i].patterns[j],
+                    tag: ELEMENTS[i].patterns,
                     replacement: ELEMENTS[i].replacement,
                     type: ELEMENTS[i].type
                 });
             }
+            else {
+                for (var j = 0, pLen = ELEMENTS[i].patterns.length; j < pLen; j++) {
+                    string = replaceEls(string, {
+                        tag: ELEMENTS[i].patterns[j],
+                        replacement: ELEMENTS[i].replacement,
+                        type: ELEMENTS[i].type
+                    });
+                }
+            }
         }
+        return string;
     }
 
     function replaceEls(html, elProperties) {
@@ -211,8 +216,11 @@ var toAsciidoc = function (string) {
         html = html.replace(/<[\/]?(section)[^><]*>/ig,"");
         html = html.replace(/<[\/]?(p)[^><]*>/ig,"");
         html = html.replace(/<[\/]?(i)[^><]*>/ig,"");
+        html = html.replace(/<[\/]?(b)[^><]*>/ig,"");
         html = html.replace(/<[\/]?(script)[^><]*>/ig,"");
         html = html.replace(/<[\/]?(iframe)[^><]*>/ig,"");
+        html = html.replace(/<[\/]?(html)[^><]*>/ig,"");
+        html = html.replace(/<[\/]?(body)[^><]*>/ig,"");
         html = html.replace(/(&gt;)/ig,">");
         html = html.replace(/(&lt;)/ig,"<");
         html = html.replace(/(&amp;)/ig,"&");
@@ -297,7 +305,7 @@ var toAsciidoc = function (string) {
         string = string.replace(/^[\t\r\n]+|[\t\r\n]+$/g, ''); // trim leading/trailing whitespace
         string = string.replace(/\n\s+\n/g, '\n\n');
         string = string.replace(/\n{3,}/g, '\n\n'); // limit consecutive linebreaks to 2
-        string = string.replace(new RegExp("</div>","ig"),"");
+        string = strip(string);
         return string;
     }
 
