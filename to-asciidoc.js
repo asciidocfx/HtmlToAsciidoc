@@ -212,6 +212,7 @@ var toAsciidoc = function (string) {
      }
 
     function strip(html) {
+        html = html.replace(/<[\/]?(meta)[^><]*>/ig,"");
         html = html.replace(/<[\/]?(span)[^><]*>/ig,"");
         html = html.replace(/<[\/]?(div)[^><]*>/ig,"");
         html = html.replace(/<[\/]?(section)[^><]*>/ig,"");
