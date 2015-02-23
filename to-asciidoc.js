@@ -23,6 +23,28 @@ var toAsciidoc = function (string) {
             parentNode.replaceChild(document.createTextNode(" "), spans[i]);
     }
 
+    // crayon-syntax higlighter fix
+    $(all).find("div[class*='crayon-syntax']").each(function () {
+        var elem = $(this);
+        elem.find(".crayon-line").append("\n");
+        elem.find(".crayon-num").remove();
+        var code = $("<code></code>");
+        code.append(elem.text());
+        elem.replaceWith(code);
+    });
+
+
+    // google syntax higlighter fix
+    $(all).find("div.syntaxhighlighter").each(function () {
+        var elem = $(this);
+        elem.find(".line").append("\n");
+        elem.find(".number,.toolbar").remove();
+        console.log(elem.text());
+        var code = $("<code></code>");
+        code.append(elem.text());
+        elem.replaceWith(code);
+    });
+
     // table converter
     var tables = all.querySelectorAll("table");
     for (var i = 0; i < tables.length; i++) {
@@ -33,8 +55,8 @@ var toAsciidoc = function (string) {
         var caption = table.querySelector("caption");
 
         tableText += "\n\n";
-        if(caption)
-            tableText += "." + caption.innerText.replace(/Table \d+\. /,"") + "\n";
+        if (caption)
+            tableText += "." + caption.innerText.replace(/Table \d+\. /, "") + "\n";
         tableText += tableBoundary;
 
         for (var j = 0; j < trs.length; j++) {
@@ -61,7 +83,7 @@ var toAsciidoc = function (string) {
         var code = codes[i];
         if (code.innerHTML.split(/\n|\r|<br>|<\/br>/).length > 1) {
             if (code.parentNode)
-                code.parentNode.replaceChild(document.createTextNode("\n\n[source,java]\n----\n" + code.innerText + "\n----\n\n"), code);
+                code.parentNode.replaceChild(document.createTextNode("\n[source,java]\n----\n" + code.innerText + "\n----\n"), code);
         }
     }
 
@@ -75,12 +97,24 @@ var toAsciidoc = function (string) {
     }
     string = traverse(all.innerHTML);
 
-    function traverse(string){
+    function traverse(string) {
         var ELEMENTS = [
+            {
+                patterns: ["script", "iframe", "meta","embed"],
+                replacement: function (str, attrs, innerHTML) {
+                    return "";
+                }
+            },
+            {
+                patterns: ["div", "span", "body", "i", "section", "html"],
+                replacement: function (str, attrs, innerHTML) {
+                    return innerHTML ? innerHTML : '';
+                }
+            },
             {
                 patterns: 'p',
                 replacement: function (str, attrs, innerHTML) {
-                    return innerHTML ? innerHTML : '';
+                    return innerHTML ? "\n" + innerHTML + "\n" : '';
                 }
             },
             {
@@ -209,25 +243,21 @@ var toAsciidoc = function (string) {
         }
 
         return string;
-     }
+    }
 
     function strip(html) {
-        html = html.replace(/<[\/]?(meta)[^><]*>/ig,"");
-        html = html.replace(/<[\/]?(span)[^><]*>/ig,"");
-        html = html.replace(/<[\/]?(div)[^><]*>/ig,"");
-        html = html.replace(/<[\/]?(section)[^><]*>/ig,"");
-        html = html.replace(/<[\/]?(p)[^><]*>/ig,"");
-        html = html.replace(/<[\/]?(i)[^><]*>/ig,"");
-        html = html.replace(/<[\/]?(b)[^><]*>/ig,"");
-        html = html.replace(/<[\/]?(script)[^><]*>/ig,"");
-        html = html.replace(/<[\/]?(iframe)[^><]*>/ig,"");
-        html = html.replace(/<[\/]?(html)[^><]*>/ig,"");
-        html = html.replace(/<[\/]?(body)[^><]*>/ig,"");
-        html = html.replace(/(&gt;)/ig,">");
-        html = html.replace(/(&lt;)/ig,"<");
-        html = html.replace(/(&amp;)/ig,"&");
-        html = html.replace(/(\u2014)/ig,"--");
-        html = html.replace(/(\u2009)/ig," ");
+        html = html.replace(/<[\/]?(meta)[^><]*>/ig, "");
+        html = html.replace(/<[\/]?(span)[^><]*>/ig, "");
+        html = html.replace(/<[\/]?(div)[^><]*>/ig, "");
+        html = html.replace(/<[\/]?(section)[^><]*>/ig, "");
+        html = html.replace(/<[\/]?(i)[^><]*>/ig, "");
+        html = html.replace(/<[\/]?(html)[^><]*>/ig, "");
+        html = html.replace(/<[\/]?(body)[^><]*>/ig, "");
+        html = html.replace(/(&gt;)/ig, ">");
+        html = html.replace(/(&lt;)/ig, "<");
+        html = html.replace(/(&amp;)/ig, "&");
+        html = html.replace(/(\u2014)/ig, "--");
+        html = html.replace(/(\u2009)/ig, " ");
         return html;
     }
 
